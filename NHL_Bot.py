@@ -1,4 +1,5 @@
 import discord
+from discord.ext import commands
 import aiohttp
 import asyncio
 import json
@@ -8,7 +9,7 @@ LIVE_GAME_URL = "https://statsapi.web.nhl.com/api/v1/game/{0}/feed/live"
 SCHEDULE_URL = "https://statsapi.web.nhl.com/api/v1/schedule"
 TEAM_URL = "https://statsapi.web.nhl.com/api/v1/teams/{0}"
 
-client = discord.Client()
+client = commands.Bot(command_prefix="!")
 data = {}
 
 
@@ -169,6 +170,65 @@ async def on_ready():
     
     print("READY!")
     client.loop.create_task(no_data())
+
+
+async def one():
+    embed = discord.Embed(
+        title=":rotating_light: Goal! :rotating_light: ",
+        description="Sably Crabsby sets up Alfredo Mankin for the super shot.",
+        color=discord.Color.red()
+    )
+
+    embed.add_field(
+        name="Picksberg Peanuts",
+        value="7",
+        inline=True
+    )
+    embed.add_field(
+        name="a",
+        value="vs",
+        inline=True
+    )
+    embed.add_field(
+        name="Sun Mojave Squids",
+        value="1",
+        inline=True
+    )
+
+    return embed
+
+
+async def two():
+    embed = discord.Embed(
+        title=":rotating_light: Goal! :rotating_light: ",
+        description="Sably Crabsby sets up Alfredo Mankin for the super shot.",
+        color=discord.Color.red()
+    )
+
+    embed.add_field(
+        name="Picksberg Peanuts vs Sun Mojave Squids",
+        value="7 - 1"
+    )
+
+    return embed
+
+
+@client.command(pass_context=True)
+async def test(ctx, *arg):
+
+    print(arg[0])
+
+    test_variants = {
+        "1": await one(),
+        "2": await two()
+        }
+    
+    await ctx.send(embed=test_variants[arg[0]])
+
+
+@client.command(pass_context=True)
+async def ping(ctx):
+    await ctx.send("Pong!")
                 
 
 with open("token.data", "r") as f:
