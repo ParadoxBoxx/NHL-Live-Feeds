@@ -150,8 +150,7 @@ async def monitor(gamePk):
         
         else:
             # Game isn't over, sleep and poll again
-            # TODO: Try running 1 second poll time when 13 games are up.
-            await asyncio.sleep(1)
+            await asyncio.sleep(10)
 
 
 async def return_url_as_json(session_obj, url):
