@@ -6,7 +6,7 @@ import datetime
 
 BASE_API_URL = "https://statsapi.web.nhl.com"
 LIVE_GAME_URL = "https://statsapi.web.nhl.com/api/v1/game/{0}/feed/live"
-SCHEDULE_URL = "https://statsapi.web.nhl.com/api/v1/schedule"
+SCHEDULE_URL = "https://statsapi.web.nhl.com/api/v1/schedule?date=2020-01-02"
 TEAM_URL = "https://statsapi.web.nhl.com/api/v1/teams/{0}"
 PLAYER_PICTURE_URL = "https://nhl.bamcontent.com/images/headshots/current/168x168/{0}.jpg"
 TEAM_COLOR = [
@@ -95,103 +95,21 @@ async def load_data():
 
 
 def create_embed(play_obj):
-    if play_obj["eventTypeId"] == "SHOT":
-        if play_obj["team"] is not None:
-            embed = discord.Embed(title="Shot", description=play_obj["description"], color=TEAM_COLOR[play_obj["team"]["id"]])
-        else:
-            embed = discord.Embed(title="Shot", description=play_obj["description"], color=0xffffff)
+
+    embed = discord.Embed(title=play_obj["result"]["eventTypeId"].replace("_"," ").title())
+    embed.description = play_obj["result"]["description"]
+    try:
         embed.set_author(name=play_obj["team"]["triCode"])
+    except KeyError:
+        embed.set_author(name="NHL")
+    try:
+        embed.color = TEAM_COLOR[play_obj["team"]["id"]]
+    except KeyError:
+        pass
+    try:
         embed.set_thumbnail(url=PLAYER_PICTURE_URL.format(play_obj["players"][0]["player"]["id"]))
-    elif play_obj["eventTypeId"] == "STOP":
-        if play_obj["description"] == "Goalie Stopped":
-            embed = discord.Embed(title="Whistle", description="Puck Frozen by Goalie")
-        elif play_obj["description"] == "Referee or Linesman":
-            embed = discord.Embed(title="Whistle", description="Play Stopped by Referee")
-        elif play_obj["description"] == "Offside":
-            embed = discord.Embed(title="Whistle", description="Offsides")
-        elif play_obj["description"] == "Puck in Crowd":
-            embed = discord.Embed(title="Whistle", description="Puck in the Crowd")
-        elif play_obj["description"] == "Icing":
-            embed = discord.Embed(title="Whistle", description="Icing")
-        elif play_obj["description"] == "Puck Frozen":
-            embed = discord.Embed(title="Whistle", description="Puck has been Frozen")
-        elif play_obj["description"] == "Puck in Netting":
-            embed = discord.Embed(title="Whistle", description="Puck Hit the Protective netting")
-        elif play_obj["description"] == "Puck in Benches":
-            embed = discord.Embed(title="Whistle", description="Puck Entered a Team Bench")
-        elif play_obj["description"] == "Hand Pass":
-            embed = discord.Embed(title="Whistle", description="Hand Pass")
-        elif play_obj["description"] == "Visitor Timeout":
-            embed = discord.Embed(title="Timeout", description="Timeout called by {}".format(play_obj["eventCode"][:2]))
-        elif play_obj["description"] == "Home Timeout":
-            embed = discord.Embed(title="Timeout", description="Timeout called by {}".format(play_obj["eventCode"][:2]))
-        elif play_obj["description"] == "TV timeout":
-            embed = discord.Embed(title="TV Timeout", description="Grab a beer!")
-        elif play_obj["description"] == "High Stick":
-            embed = discord.Embed(title="Whistle", description="High Sticking")
-        elif play_obj["description"] == "Player Equipment":
-            embed = discord.Embed(title="Whistle", description="Player Equipment malfunction")
-        else:
-            embed = discord.Embed(title="PLACEHOLDER", description=play_obj["description"])
-    elif play_obj["eventTypeId"] == "GAME_SCHEDULED":
-        #TODO: Get some stats for each team
-        embed = discord.Embed(title="Game Scheduled")
-    elif play_obj["eventTypeId"] == "PERIOD_START":
-        if "1st" in play_obj["ordinalNum"]:
-            embed = discord.Embed(title="1st Period Start")
-        elif "2nd" in play_obj["ordinalNum"]:
-            embed = discord.Embed(title="2nd Period Start")
-        elif "3rd" in play_obj["ordinalNum"]:
-            embed = discord.Embed(title="3rd Period Start")
-        elif "OT" in play_obj["ordinalNum"]:
-            embed = discord.Embed(title="OT Start")
-    elif play_obj["eventTypeId"] == "PERIOD_READY":
-        if "1st" in play_obj["ordinalNum"]:
-            embed = discord.Embed(title="1st Period Ready")
-        elif "2nd" in play_obj["ordinalNum"]:
-            embed = discord.Embed(title="2nd Period Ready")
-        elif "3rd" in play_obj["ordinalNum"]:
-            embed = discord.Embed(title="3rd Period Ready")
-        elif "OT" in play_obj["ordinalNum"]:
-            embed = discord.Embed(title="OT Ready")
-    elif play_obj["eventTypeId"] == "CHALLENGE":
-        if play_obj["team"] is not None:
-            embed = discord.Embed(title="Challenge", description="Coach's Challenge", color=TEAM_COLOR[play_obj["team"]["id"]])
-        else:
-            embed = discord.Embed(title="Challenge", description="Coach's Challenge", color=0xffffff)
-        embed.set_author(name=play_obj["team"]["triCode"])
-    elif play_obj["eventTypeId"] == "PERIOD_END":
-        if "1st" in play_obj["ordinalNum"]:
-            embed = discord.Embed(title="End of 1st Period")
-        elif "2nd" in play_obj["ordinalNum"]:
-            embed = discord.Embed(title="End of 2nd Period")
-        elif "3rd" in play_obj["ordinalNum"]:
-            embed = discord.Embed(title="End of 3rd Period")
-        elif "OT" in play_obj["ordinalNum"]:
-            embed = discord.Embed(title="End of OT")
-    elif play_obj["eventTypeId"] == "PERIOD_OFFICIAL":
-        embed = discord.Embed(title="Period Official", description="Period Plays have been affirmed")
-    elif play_obj["eventTypeId"] == "GAME_OFFICIAL":
-        embed = discord.Embed(title="Game Official", description="The game's plays have been affirmed")
-    elif play_obj["eventTypeId"] == "GAME_END":
-        embed = discord.Embed(title="End of the Game")
-    elif play_obj["eventTypeId"] == "GOAL":
-        if play_obj["team"] is not None:
-            embed = discord.Embed(title=":rotating_light: Goal :rotating_light: ", description=play_obj["description"], color=TEAM_COLOR[play_obj["team"]["id"]])
-        else:
-            embed = discord.Embed(title=":rotating_light: Goal :rotating_light: ", description=play_obj["description"], color=0xffffff)
-        embed.set_author(name=play_obj["team"]["triCode"])
-        embed.set_thumbnail(url=PLAYER_PICTURE_URL.format(play_obj["players"][0]["player"]["id"]))
-    else:
-        try:
-            if play_obj["team"] is not None:
-                embed = discord.Embed(title=play_obj["eventTypeId"].replace("_"," ").title(), description=play_obj["description"], color=TEAM_COLOR[play_obj["team"]["id"]])
-            else:
-                embed = discord.Embed(title=play_obj["eventTypeId"].replace("_"," ").title(), description=play_obj["description"], color=0xffffff)
-            embed.set_author(name=play_obj["team"]["triCode"])
-            embed.set_thumbnail(url=PLAYER_PICTURE_URL.format(play_obj["players"][0]["player"]["id"]))
-        except:
-            embed = discord.Embed(title=play_obj["eventTypeId"].replace("_"," ").title(), description=play_obj["description"])
+    except KeyError:
+        pass
     try:
         embed.set_footer(text="NHL and the NHL Shield are registered trademarks of the National Hockey League. NHL and NHL team marks are the property of the NHL and its teams. © NHL 2020. All Rights Reserved.")
         return embed
@@ -215,7 +133,9 @@ async def forever_loop():
     global client
 
     while True:
-        games_category = discord.utils.get(client.get_all_channels(), name="Games", guild__name="NHL Live Feeds")
+        games_category = None
+        while games_category is None:
+            games_category = discord.utils.get(client.get_all_channels(), name="Games", guild__name="NHL Live Feeds")
         if not data:
             # No data, get the schedule
             schedule_json = await return_url_as_json(SCHEDULE_URL)
@@ -276,49 +196,29 @@ async def monitor_game(gamePk):
         for event in live_json["liveData"]["plays"]["allPlays"]:
             if event["about"]["eventIdx"] not in data[gamePk]["plays"]:
                 data[gamePk]["plays"][event["about"]["eventIdx"]] = {
-                    "eventIdx": recursive_dict_search(event, ["about","eventIdx"]),
-                    "eventTypeId": recursive_dict_search(event,["result", "eventTypeId"]),
-                    "description": recursive_dict_search(event,["result","description"]),
-                    "players": recursive_dict_search(event,["players"]),
-                    "team": recursive_dict_search(event,["team"]),
-                    "discord_message_id": -1,
-                    "ordinalNum": recursive_dict_search(event,["about","ordinalNum"]),
-                    "eventCode": recursive_dict_search(event,["result","eventCode"]),
-                    "goals": recursive_dict_search(event,["about","goals"]),
-                    "posted": "new"
+                    "NHLAPI": event,
+                    "other": {}
                 }
+                #data[gamePk]["plays"][event["about"]["eventIdx"]]["NHLAPI"] = event
+                data[gamePk]["plays"][event["about"]["eventIdx"]]["other"]["discord_message_obj"] = None
+                data[gamePk]["plays"][event["about"]["eventIdx"]]["other"]["posted"] = "new"
             else:
-                if event["result"]["eventTypeId"] != data[gamePk]["plays"][event["about"]["eventIdx"]]["eventTypeId"]:
-                    data[gamePk]["plays"][event["about"]["eventIdx"]]["eventTypeId"] = event["result"]["eventTypeId"]
-                    data[gamePk]["plays"][event["about"]["eventIdx"]]["posted"] = "edited"
-                if event["result"]["description"] != data[gamePk]["plays"][event["about"]["eventIdx"]]["description"]:
-                    data[gamePk]["plays"][event["about"]["eventIdx"]]["description"] = event["result"]["description"]
-                    data[gamePk]["plays"][event["about"]["eventIdx"]]["posted"] = "edited"
-                if event["result"]["players"] != data[gamePk]["plays"][event["about"]["eventIdx"]]["players"]:
-                    data[gamePk]["plays"][event["about"]["eventIdx"]]["players"] = event["result"]["players"]
-                    data[gamePk]["plays"][event["about"]["eventIdx"]]["posted"] = "edited"
-                if event["result"]["team"] != data[gamePk]["plays"][event["about"]["eventIdx"]]["team"]:
-                    data[gamePk]["plays"][event["about"]["eventIdx"]]["team"] = event["result"]["team"]
-                    data[gamePk]["plays"][event["about"]["eventIdx"]]["posted"] = "edited"
-                if event["result"]["ordinalNum"] != data[gamePk]["plays"][event["about"]["eventIdx"]]["ordinalNum"]:
-                    data[gamePk]["plays"][event["about"]["eventIdx"]]["ordinalNum"] = event["result"]["ordinalNum"]
-                    data[gamePk]["plays"][event["about"]["eventIdx"]]["posted"] = "edited"
-                if event["result"]["eventCode"] != data[gamePk]["plays"][event["about"]["eventIdx"]]["eventCode"]:
-                    data[gamePk]["plays"][event["about"]["eventIdx"]]["eventCode"] = event["result"]["eventCode"]
-                    data[gamePk]["plays"][event["about"]["eventIdx"]]["posted"] = "edited"
-                if event["result"]["goals"] != data[gamePk]["plays"][event["about"]["eventIdx"]]["goals"]:
-                    data[gamePk]["plays"][event["about"]["eventIdx"]]["goals"] = event["result"]["goals"]
-                    data[gamePk]["plays"][event["about"]["eventIdx"]]["posted"] = "edited"
+                if data[gamePk]["plays"][event["about"]["eventIdx"]]["NHLAPI"] != event:
+                    print("Found an edited event.")
+                    data[gamePk]["plays"][event["about"]["eventIdx"]]["NHLAPI"] = event
+                    data[gamePk]["plays"][event["about"]["eventIdx"]]["other"]["posted"] = "edited"
+                else:
+                    print("play already existed, no changes.")
 
         # Now that our internal data model is updated, we need to update discord as necessary.
         for playIdx in data[gamePk]["plays"]:
-            if data[gamePk]["plays"][playIdx]["posted"] is "new":
-                discord_message_obj = await data[gamePk]["discord_channel"].send(embed=create_embed(data[gamePk]["plays"][playIdx]))
-                data[gamePk]["plays"][playIdx]["discord_message_id"] = discord_message_obj
-                data[gamePk]["plays"][playIdx]["posted"] = "posted"
-            elif data[gamePk]["plays"][playIdx]["posted"] is "edited":
-                await discord_message_obj.edit(embed=create_embed(data[gamePk]["plays"][playIdx]))
-                data[gamePk]["plays"][playIdx]["posted"] = "posted"
+            if data[gamePk]["plays"][playIdx]["other"]["posted"] is "new":
+                discord_message_obj = await data[gamePk]["discord_channel"].send(embed=create_embed(data[gamePk]["plays"][playIdx]["NHLAPI"]))
+                data[gamePk]["plays"][playIdx]["other"]["discord_message_obj"] = discord_message_obj
+                data[gamePk]["plays"][playIdx]["other"]["posted"] = "posted"
+            elif data[gamePk]["plays"][playIdx]["other"]["posted"] is "edited":
+                await discord_message_obj.edit(embed=create_embed(data[gamePk]["plays"][playIdx]["NHLAPI"]))
+                data[gamePk]["plays"][playIdx]["other"]["posted"] = "posted"
 
         if live_json["gameData"]["status"]["codedGameState"] is "7":
             log_time = datetime.datetime.now()
