@@ -6,7 +6,7 @@ import datetime
 
 BASE_API_URL = "https://statsapi.web.nhl.com"
 LIVE_GAME_URL = "https://statsapi.web.nhl.com/api/v1/game/{0}/feed/live"
-SCHEDULE_URL = "https://statsapi.web.nhl.com/api/v1/schedule?date=2020-01-02"
+SCHEDULE_URL = "https://statsapi.web.nhl.com/api/v1/schedule"
 TEAM_URL = "https://statsapi.web.nhl.com/api/v1/teams/{0}"
 PLAYER_PICTURE_URL = "https://nhl.bamcontent.com/images/headshots/current/168x168/{0}.jpg"
 TEAM_COLOR = [
