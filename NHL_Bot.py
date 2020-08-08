@@ -78,7 +78,7 @@ async def return_url_as_json(url_string):
         async with session.get(url_string) as response:
             if response.status != 200:
                 log_time = datetime.datetime.now()
-                print("[" + str(log_time.year) + "-" + str(log_time.month) + "-" + str(log_time.day) + " " + str(log_time.hour) + ":" + str(log_time.minute) + ":" + str(log_time.second) + "] Didn't get a 200, sleeping.")
+                print(log_time.strftime("[%Y-%m-%d %H:%M:%S] - ") + "Didn't get a 200, sleeping.")
                 await asyncio.sleep(10)
             else:
                 return json.loads(await response.text())
@@ -96,7 +96,10 @@ async def load_data():
 
 def create_embed(play_obj):
     if play_obj["eventTypeId"] == "SHOT":
-        embed = discord.Embed(title="Shot", description=play_obj["description"], color=TEAM_COLOR[play_obj["team"]["id"]])
+        if play_obj["team"] is not None:
+            embed = discord.Embed(title="Shot", description=play_obj["description"], color=TEAM_COLOR[play_obj["team"]["id"]])
+        else:
+            embed = discord.Embed(title="Shot", description=play_obj["description"], color=0xffffff)
         embed.set_author(name=play_obj["team"]["triCode"])
         embed.set_thumbnail(url=PLAYER_PICTURE_URL.format(play_obj["players"][0]["player"]["id"]))
     elif play_obj["eventTypeId"] == "STOP":
@@ -152,7 +155,10 @@ def create_embed(play_obj):
         elif "OT" in play_obj["ordinalNum"]:
             embed = discord.Embed(title="OT Ready")
     elif play_obj["eventTypeId"] == "CHALLENGE":
-        embed = discord.Embed(title="Challenge", description="Coach's Challenge", color=TEAM_COLOR[play_obj["team"]["id"]])
+        if play_obj["team"] is not None:
+            embed = discord.Embed(title="Challenge", description="Coach's Challenge", color=TEAM_COLOR[play_obj["team"]["id"]])
+        else:
+            embed = discord.Embed(title="Challenge", description="Coach's Challenge", color=0xffffff)
         embed.set_author(name=play_obj["team"]["triCode"])
     elif play_obj["eventTypeId"] == "PERIOD_END":
         if "1st" in play_obj["ordinalNum"]:
@@ -170,20 +176,37 @@ def create_embed(play_obj):
     elif play_obj["eventTypeId"] == "GAME_END":
         embed = discord.Embed(title="End of the Game")
     elif play_obj["eventTypeId"] == "GOAL":
-        embed = discord.Embed(title=":rotating_light: Goal :rotating_light: ", description=play_obj["description"], color=TEAM_COLOR[play_obj["team"]["id"]])
+        if play_obj["team"] is not None:
+            embed = discord.Embed(title=":rotating_light: Goal :rotating_light: ", description=play_obj["description"], color=TEAM_COLOR[play_obj["team"]["id"]])
+        else:
+            embed = discord.Embed(title=":rotating_light: Goal :rotating_light: ", description=play_obj["description"], color=0xffffff)
         embed.set_author(name=play_obj["team"]["triCode"])
         embed.set_thumbnail(url=PLAYER_PICTURE_URL.format(play_obj["players"][0]["player"]["id"]))
     else:
         try:
-            embed = discord.Embed(title=play_obj["eventTypeId"].replace("_"," ").title(), description=play_obj["description"], color=TEAM_COLOR[play_obj["team"]["id"]])
+            if play_obj["team"] is not None:
+                embed = discord.Embed(title=play_obj["eventTypeId"].replace("_"," ").title(), description=play_obj["description"], color=TEAM_COLOR[play_obj["team"]["id"]])
+            else:
+                embed = discord.Embed(title=play_obj["eventTypeId"].replace("_"," ").title(), description=play_obj["description"], color=0xffffff)
             embed.set_author(name=play_obj["team"]["triCode"])
             embed.set_thumbnail(url=PLAYER_PICTURE_URL.format(play_obj["players"][0]["player"]["id"]))
         except:
             embed = discord.Embed(title=play_obj["eventTypeId"].replace("_"," ").title(), description=play_obj["description"])
     try:
+        embed.set_footer(text="NHL and the NHL Shield are registered trademarks of the National Hockey League. NHL and NHL team marks are the property of the NHL and its teams. © NHL 2020. All Rights Reserved.")
         return embed
     except:
-        print("OOPSIE! " + play_obj["description"])
+        print(log_time.strftime("[%Y-%m-%d %H:%M:%S] - ") + "OOPSIE! " + play_obj["description"])
+
+def recursive_dict_search(search_dict, search_list):
+    search_term = search_list.pop(0)
+    if search_term in search_dict:
+        if len(search_list) == 0:
+            return search_dict[search_term]
+        else:
+            return recursive_dict_search(search_dict[search_term], search_list)
+    else:
+        return None
     
 
 async def forever_loop():
@@ -201,7 +224,7 @@ async def forever_loop():
 
         if schedule_json["totalGames"] <= 0:
             log_time = datetime.datetime.now()
-            print("[" + str(log_time.year) + "-" + str(log_time.month) + "-" + str(log_time.day) + " " + str(log_time.hour) + ":" + str(log_time.minute) + ":" + str(log_time.second) + "] No games today.")
+            print(log_time.strftime("[%Y-%m-%d %H:%M:%S] - ") +  "No games today.")
         elif schedule_json["totalGames"] > 0:
             for game in schedule_json["dates"][0]["games"]:
                 home_json = await return_url_as_json(TEAM_URL.format(str(game["teams"]["home"]["team"]["id"])))
@@ -231,8 +254,7 @@ async def forever_loop():
         tomorrow = now + datetime.timedelta(days=1)
         tomorrow = tomorrow.replace(hour=12, minute=5, second=0, microsecond=0)
         log_time = datetime.datetime.now()
-        print("[" + str(log_time.year) + "-" + str(log_time.month) + "-" + str(log_time.day) + " " + str(log_time.hour) + ":" + str(log_time.minute) + ":" + str(log_time.second) +
-        "] main loop sleeping " + str((tomorrow - now).total_seconds()) + " seconds.")
+        print(log_time.strftime("[%Y-%m-%d %H:%M:%S] - ") +  "main loop sleeping " + str((tomorrow - now).total_seconds()) + " seconds.")
         await asyncio.sleep((tomorrow - now).total_seconds())
 
 
@@ -247,60 +269,45 @@ async def monitor_game(gamePk):
 
     while not game_complete:
         log_time = datetime.datetime.now()
-        print("[" + str(log_time.year) + "-" + str(log_time.month) + "-" + str(log_time.day) + " " + str(log_time.hour) + ":" + str(log_time.minute) + ":" + str(log_time.second) +
-        "] Checking for update for {} at {}".format(data[gamePk]["away"]["abbreviation"], data[gamePk]["home"]["abbreviation"]))
+        print(log_time.strftime("[%Y-%m-%d %H:%M:%S] - ") +  "Checking for update for {} at {}".format(data[gamePk]["away"]["abbreviation"], data[gamePk]["home"]["abbreviation"]))
         live_json = await return_url_as_json(LIVE_GAME_URL.format(str(gamePk)))
 
         # See what new plays we have as well as update preexisting plays
         for event in live_json["liveData"]["plays"]["allPlays"]:
             if event["about"]["eventIdx"] not in data[gamePk]["plays"]:
-                try:
-                    data[gamePk]["plays"][event["about"]["eventIdx"]] = {
-                        "eventIdx": event["about"]["eventIdx"],
-                        "eventTypeId": event["result"]["eventTypeId"],
-                        "description": event["result"]["description"],
-                        "players": event["players"],
-                        "team": event["team"],
-                        "discord_message_id": -1,
-                        "ordinalNum": event["about"]["ordinalNum"],
-                        "eventCode": event["result"]["eventCode"],
-                        "goals": event["about"]["goals"],
-                        "posted": "new"
-                    }
-                except KeyError:
-                    try:
-                        data[gamePk]["plays"][event["about"]["eventIdx"]] = {
-                            "eventIdx": event["about"]["eventIdx"],
-                            "eventTypeId": event["result"]["eventTypeId"],
-                            "description": event["result"]["description"],
-                            "players": None,
-                            "team": event["team"],
-                            "ordinalNum": event["about"]["ordinalNum"],
-                            "discord_message_id": -1,
-                            "eventCode": event["result"]["eventCode"],
-                            "goals": event["about"]["goals"],
-                            "posted": "new"
-                        }
-                    except KeyError:
-                        data[gamePk]["plays"][event["about"]["eventIdx"]] = {
-                            "eventIdx": event["about"]["eventIdx"],
-                            "eventTypeId": event["result"]["eventTypeId"],
-                            "description": event["result"]["description"],
-                            "players": None,
-                            "team": None,
-                            "ordinalNum": event["about"]["ordinalNum"],
-                            "discord_message_id": -1,
-                            "eventCode": event["result"]["eventCode"],
-                            "goals": event["about"]["goals"],
-                            "posted": "new"
-                        }
-
+                data[gamePk]["plays"][event["about"]["eventIdx"]] = {
+                    "eventIdx": recursive_dict_search(event, ["about","eventIdx"]),
+                    "eventTypeId": recursive_dict_search(event,["result", "eventTypeId"]),
+                    "description": recursive_dict_search(event,["result","description"]),
+                    "players": recursive_dict_search(event,["players"]),
+                    "team": recursive_dict_search(event,["team"]),
+                    "discord_message_id": -1,
+                    "ordinalNum": recursive_dict_search(event,["about","ordinalNum"]),
+                    "eventCode": recursive_dict_search(event,["result","eventCode"]),
+                    "goals": recursive_dict_search(event,["about","goals"]),
+                    "posted": "new"
+                }
             else:
                 if event["result"]["eventTypeId"] != data[gamePk]["plays"][event["about"]["eventIdx"]]["eventTypeId"]:
                     data[gamePk]["plays"][event["about"]["eventIdx"]]["eventTypeId"] = event["result"]["eventTypeId"]
                     data[gamePk]["plays"][event["about"]["eventIdx"]]["posted"] = "edited"
                 if event["result"]["description"] != data[gamePk]["plays"][event["about"]["eventIdx"]]["description"]:
                     data[gamePk]["plays"][event["about"]["eventIdx"]]["description"] = event["result"]["description"]
+                    data[gamePk]["plays"][event["about"]["eventIdx"]]["posted"] = "edited"
+                if event["result"]["players"] != data[gamePk]["plays"][event["about"]["eventIdx"]]["players"]:
+                    data[gamePk]["plays"][event["about"]["eventIdx"]]["players"] = event["result"]["players"]
+                    data[gamePk]["plays"][event["about"]["eventIdx"]]["posted"] = "edited"
+                if event["result"]["team"] != data[gamePk]["plays"][event["about"]["eventIdx"]]["team"]:
+                    data[gamePk]["plays"][event["about"]["eventIdx"]]["team"] = event["result"]["team"]
+                    data[gamePk]["plays"][event["about"]["eventIdx"]]["posted"] = "edited"
+                if event["result"]["ordinalNum"] != data[gamePk]["plays"][event["about"]["eventIdx"]]["ordinalNum"]:
+                    data[gamePk]["plays"][event["about"]["eventIdx"]]["ordinalNum"] = event["result"]["ordinalNum"]
+                    data[gamePk]["plays"][event["about"]["eventIdx"]]["posted"] = "edited"
+                if event["result"]["eventCode"] != data[gamePk]["plays"][event["about"]["eventIdx"]]["eventCode"]:
+                    data[gamePk]["plays"][event["about"]["eventIdx"]]["eventCode"] = event["result"]["eventCode"]
+                    data[gamePk]["plays"][event["about"]["eventIdx"]]["posted"] = "edited"
+                if event["result"]["goals"] != data[gamePk]["plays"][event["about"]["eventIdx"]]["goals"]:
+                    data[gamePk]["plays"][event["about"]["eventIdx"]]["goals"] = event["result"]["goals"]
                     data[gamePk]["plays"][event["about"]["eventIdx"]]["posted"] = "edited"
 
         # Now that our internal data model is updated, we need to update discord as necessary.
@@ -310,14 +317,12 @@ async def monitor_game(gamePk):
                 data[gamePk]["plays"][playIdx]["discord_message_id"] = discord_message_obj
                 data[gamePk]["plays"][playIdx]["posted"] = "posted"
             elif data[gamePk]["plays"][playIdx]["posted"] is "edited":
-                discord_message_obj.edit(data[gamePk]["plays"][playIdx]["description"])
+                await discord_message_obj.edit(embed=create_embed(data[gamePk]["plays"][playIdx]))
                 data[gamePk]["plays"][playIdx]["posted"] = "posted"
 
         if live_json["gameData"]["status"]["codedGameState"] is "7":
-            #TODO: Verify if code 7 always means complete
             log_time = datetime.datetime.now()
-            print("[" + str(log_time.year) + "-" + str(log_time.month) + "-" + str(log_time.day) + " " + str(log_time.hour) + ":" + str(log_time.minute) + ":" + str(log_time.second) +
-            "] {} at {} is complete, deleting in one hour.".format(data[gamePk]["away"]["abbreviation"], data[gamePk]["home"]["abbreviation"]))
+            print(log_time.strftime("[%Y-%m-%d %H:%M:%S] - ") +  "{} at {} is complete, deleting in one hour.".format(data[gamePk]["away"]["abbreviation"], data[gamePk]["home"]["abbreviation"]))
             await asyncio.sleep(3600)
             await data[gamePk]["discord_channel"].delete()
             data.pop(gamePk)
@@ -329,7 +334,7 @@ async def monitor_game(gamePk):
 @client.event
 async def on_ready():
     log_time = datetime.datetime.now()
-    print("[" + str(log_time.year) + "-" + str(log_time.month) + "-" + str(log_time.day) + " " + str(log_time.hour) + ":" + str(log_time.minute) + ":" + str(log_time.second) + "] Discord Ready")
+    print(log_time.strftime("[%Y-%m-%d %H:%M:%S] - ") +  "Discord Ready")
     client.loop.create_task(load_data())
 
 with open("token.data","r") as f:
