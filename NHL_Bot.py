@@ -111,20 +111,10 @@ def create_embed(play_obj):
     except KeyError:
         pass
     try:
-        embed.set_footer(text="NHL and the NHL Shield are registered trademarks of the National Hockey League. NHL and NHL team marks are the property of the NHL and its teams. © NHL 2020. All Rights Reserved.")
+        # embed.set_footer(text="NHL and the NHL Shield are registered trademarks of the National Hockey League. NHL and NHL team marks are the property of the NHL and its teams. © NHL 2020. All Rights Reserved.")
         return embed
     except:
         print(log_time.strftime("[%Y-%m-%d %H:%M:%S] - ") + "OOPSIE! " + play_obj["description"])
-
-def recursive_dict_search(search_dict, search_list):
-    search_term = search_list.pop(0)
-    if search_term in search_dict:
-        if len(search_list) == 0:
-            return search_dict[search_term]
-        else:
-            return recursive_dict_search(search_dict[search_term], search_list)
-    else:
-        return None
     
 
 async def forever_loop():
@@ -139,8 +129,12 @@ async def forever_loop():
         if not data:
             # No data, get the schedule
             schedule_json = await return_url_as_json(SCHEDULE_URL)
-            for old_channel in games_category.channels:
+        else:
+            data = {}
+
+        for old_channel in games_category.channels:
                 await old_channel.delete()
+            
 
         if schedule_json["totalGames"] <= 0:
             log_time = datetime.datetime.now()
@@ -183,6 +177,7 @@ async def monitor_game(gamePk):
 
     now = datetime.datetime.now().astimezone(datetime.timezone.utc)
     if now < data[gamePk]["gameDateTime"]:
+        # print(now.strftime("[%Y-%m-%d %H:%M:%S] - ") +  "{} at {} game is in {} seconds.".format(data[gamePk]["away"]["abbreviation"], data[gamePk]["away"]["abbreviation"], str(data[gamePk["gameDatetime"]] - now).total_seconds()))
         await asyncio.sleep((data[gamePk]["gameDateTime"] - now).total_seconds())
     
     game_complete = False
@@ -199,16 +194,12 @@ async def monitor_game(gamePk):
                     "NHLAPI": event,
                     "other": {}
                 }
-                #data[gamePk]["plays"][event["about"]["eventIdx"]]["NHLAPI"] = event
                 data[gamePk]["plays"][event["about"]["eventIdx"]]["other"]["discord_message_obj"] = None
                 data[gamePk]["plays"][event["about"]["eventIdx"]]["other"]["posted"] = "new"
             else:
                 if data[gamePk]["plays"][event["about"]["eventIdx"]]["NHLAPI"] != event:
-                    print("Found an edited event.")
                     data[gamePk]["plays"][event["about"]["eventIdx"]]["NHLAPI"] = event
                     data[gamePk]["plays"][event["about"]["eventIdx"]]["other"]["posted"] = "edited"
-                else:
-                    print("play already existed, no changes.")
 
         # Now that our internal data model is updated, we need to update discord as necessary.
         for playIdx in data[gamePk]["plays"]:
@@ -217,10 +208,18 @@ async def monitor_game(gamePk):
                 data[gamePk]["plays"][playIdx]["other"]["discord_message_obj"] = discord_message_obj
                 data[gamePk]["plays"][playIdx]["other"]["posted"] = "posted"
             elif data[gamePk]["plays"][playIdx]["other"]["posted"] is "edited":
-                await discord_message_obj.edit(embed=create_embed(data[gamePk]["plays"][playIdx]["NHLAPI"]))
+                await data[gamePk]["plays"][playIdx]["other"]["discord_message_obj"].edit(embed=create_embed(data[gamePk]["plays"][playIdx]["NHLAPI"]))
                 data[gamePk]["plays"][playIdx]["other"]["posted"] = "posted"
 
-        if live_json["gameData"]["status"]["codedGameState"] is "7":
+        # Update game score in title
+        # TODO: can we poll the box score? This seems to have introduced a huge processing delay
+        home_score = data[gamePk]["plays"][list(data[gamePk]["plays"].keys())[-1]]["NHLAPI"]["about"]["goals"]["home"]
+        away_score = data[gamePk]["plays"][list(data[gamePk]["plays"].keys())[-1]]["NHLAPI"]["about"]["goals"]["away"]
+        await data[gamePk]["discord_channel"].edit(name=data[gamePk]["away"]["abbreviation"] + " " + str(away_score) + " at " + data[gamePk]["home"]["abbreviation"] + " " + str(home_score))
+
+        # Check to see if game is over. Sleep 1 hour and then delete
+        # TODO: Text dump of game into text dump channel
+        if live_json["gameData"]["status"]["codedGameState"] in ["6","7"]:
             log_time = datetime.datetime.now()
             print(log_time.strftime("[%Y-%m-%d %H:%M:%S] - ") +  "{} at {} is complete, deleting in one hour.".format(data[gamePk]["away"]["abbreviation"], data[gamePk]["home"]["abbreviation"]))
             await asyncio.sleep(3600)
