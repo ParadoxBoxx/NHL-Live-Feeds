@@ -114,7 +114,8 @@ def create_embed(play_obj):
         # embed.set_footer(text="NHL and the NHL Shield are registered trademarks of the National Hockey League. NHL and NHL team marks are the property of the NHL and its teams. © NHL 2020. All Rights Reserved.")
         return embed
     except:
-        print(log_time.strftime("[%Y-%m-%d %H:%M:%S] - ") + "OOPSIE! " + play_obj["description"])
+        now = datetime.datetime.now()
+        print(now.strftime("[%Y-%m-%d %H:%M:%S] - ") + "OOPSIE! " + play_obj["description"])
     
 
 async def forever_loop():
